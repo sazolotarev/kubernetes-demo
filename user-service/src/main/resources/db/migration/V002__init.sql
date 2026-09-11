@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY NOT NULL DEFAULT uuidv7(),
+    created_at TIMESTAMPTZ NOT NULL,
+    username VARCHAR UNIQUE NOT NULL,
+    password VARCHAR NOT NULL,
+    roles VARCHAR(20)[] NOT NULL
+);
