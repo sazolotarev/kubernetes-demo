@@ -108,7 +108,7 @@ export default function TodoListsPage() {
 
       {todoLists.length === 0 && !isLoading && !error && (
         <div className="mt-4">
-          You don't have any To-Do list yet. Use the form below to create your
+          You don't have any To-Do lists yet. Use the form below to create your
           first list!
         </div>
       )}
