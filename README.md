@@ -20,7 +20,7 @@ done
 
 Развёртывание всех сервисов:
 ```
-kubectl apply -f kubernetes.yaml
+kubectl apply -f kubernetes/
 ```
 
 Для доступа через localhost:

@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-service
+  labels:
+    app: todo-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: todo-service
+  template:
+    metadata:
+      labels:
+        app: todo-service
+    spec:
+      containers:
+        - name: todo-service
+          image: todo-service:0.0.1-SNAPSHOT
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://todo-service-postgres:5432/postgres
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: todo-service-postgres-secret
+                  key: postgres-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: todo-service-postgres-secret
+                  key: postgres-password
+            - name: SPRING_DATA_REDIS_HOST
+              value: redis
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: redis-password
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-service
+spec:
+  selector:
+    app: todo-service
+  ports:
+    - protocol: TCP
+      port: 8080
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: todo-service-postgres-secret
+type: Opaque
+stringData:
+  postgres-username: postgres
+  postgres-password: demo
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: todo-service-postgres-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: todo-service-postgres
+spec:
+  serviceName: todo-service-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-service-postgres
+  template:
+    metadata:
+      labels:
+        app: todo-service-postgres
+    spec:
+      containers:
+        - name: todo-service-postgres
+          image: postgres:18
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: todo-service-postgres-secret
+                  key: postgres-password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: todo-service-postgres-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: todo-service-postgres-storage
+          persistentVolumeClaim:
+            claimName: todo-service-postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-service-postgres
+spec:
+  selector:
+    app: todo-service-postgres
+  ports:
+    - protocol: TCP
+      port: 5432
